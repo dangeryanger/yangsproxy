@@ -1,0 +1,11 @@
+{
+  "dependencies": {
+    "@seald-io/nedb": "^4.0.3",
+    "adm-zip": "^0.5.10",
+    "axios": "^1.6.7",
+    "discord.js": "^14.14.1",
+    "fs": "^0.0.1-security",
+    "node-notifier": "^10.0.1",
+    "yaml": "^2.3.4"
+  }
+}

@@ -128,3 +128,16 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# project specific files
+.vscode/
+package.sh
+*.zip
+*.yaml
+!config.yaml
+proxy
+proxy.exe
+test.js
+tp.db
+update*
+!update.js

@@ -1,0 +1,262 @@
+# What port to listen on. If you run more than one instance of the proxy each character will need
+# their own port. You WILL need to add a new BBS in MegaMUD pointing to localhost and whatever
+# port you put here
+server:
+  listen: 31000
+
+# most likely you won't need to change anything here other than the port to 23
+bbs:
+  #host: mud.paramud.com
+  host: 217.180.196.241
+  # NOTE: update this to port 23 for production
+  port: 2427
+    
+discord:
+  bot: "token" # your discord bot token
+  channel: "1223320104733769808" # has to be a string
+  users:
+    ray_zor: Yang
+    
+log:
+  '/': false
+  '/telnet': false
+  '/telnet/disconnects': false
+  '/config': false
+  '/config/errors': false
+  '/timers': false
+  '/timers/execute': false
+  '/spells': false
+  '/messaging/incoming/data': false
+  '/messaging/incoming/data/noAnsi': false
+  '/messaging/incoming/data/ansi': false
+  '/messaging/incoming/data/line': false
+  '/messaging/outgoing/command': false
+  '/parsing/mobs': false
+  '/discord': true
+    
+disk:
+  '/': false
+
+# NOTE: MegaMUD controls the login process to whatever realm you want
+    
+# banner to display at the top of your MegaMUD window. The values here are only updated
+# when they are updated in game. For example, AC/DR will only update when an 'st' is done.
+# map/room will only update when 'rm' or 'pro' is done
+# banner: "W: {weapon} S: {shield} AC: {ac}/{dr} M: {map} R: {room}"
+  
+# Change this to your characters name and give yourself all @'s
+botname: Yang
+  
+###
+# VARIABLES - do not move this section
+###
+variables:
+  # variables to be used by {variable} anywhere in this program. these will always be
+  # initialized to these values on program start and changes to these will not be saved
+  # you can persist variables in game by 'set variable value' and remove them with 'clear variable'
+  # Also note that you can check the state of variables with 'state'
+  weapon: anointed morningstar
+  # if you aren't using a shield just leave this blank
+  shield: golden chalice
+  # only set this up if you want to be able to use @gear so another player can make you 
+  # equip what you need
+  gear:
+    - "{weapon}"
+    - "{!shield}"
+    - crimson execution mask
+      
+###
+# MACROS - do not move this section
+###
+# You must alias the macro with the name you want to use e.g.; &MacroName
+# You can then reference it elsewhere with *MacroName
+macros:
+  # {!shield} will only run if a shield is setup otherwise it is skipped
+  remHands: &RemoveHands
+    - rem {weapon}
+    - rem {!shield}
+  eqHands: &EquipHands
+    - eq {!shield}
+    - eq {weapon}
+  useNexus: &UseNexus
+    # skips if shield is not defined
+    - *RemoveHands
+    - eq nexus spear
+    - use nexus {mob}
+    - rem nexus spear
+    - *EquipHands
+  useWarhorn: &UseWarhorn
+    - *RemoveHands
+    - wea engraved warhorn
+    - use warhorn
+    - *EquipHands
+      
+  # this is is a list of players that are allowed to send extended @ commands
+  # delete Yin and Tristian if you aren't using this
+  allowedPlayers: &AllowedPlayers
+    - Furby
+    - Yin
+    - Tristian
+      
+###
+# TIMERS
+###
+timers:
+  # time is in seconds
+  #- every: 4
+    #do: rm
+    
+###
+# MESSAGES
+# handles incoming messages. {} are used to capture into variables that can be reused
+# an asterisk (*) matches spaces.
+# When the message is encountered you can raise an event below.
+# - find: "Message*{variables}*go here"
+#   hide: true/false
+#   anywhere: true/false
+#   raise: eventToRaise
+###
+messages:
+  # this just captures it into the variables map and room
+  - find: "Location:*{map},{room}"
+  # ensures that your party is still with you
+  - find: "You climb through a hole in the ceiling."
+    raise: partyCheck
+  # captures your AC/DR
+  - find: "Armour Class:*{ac}/{dr}*Thievery"
+    anywhere: true
+      #4/17/2024 4:32 PM - Mother Ungol - 1/23
+  - find: "{mm}/{dd}/{yyyy} {time} {ampm} - {cause} - {location}"   
+    array: deaths
+      
+      
+###
+# OUTPUT
+# handles outgoing commands. this is anything typed by the player or sent by mega
+# this will intercept it, raise the event, and then process the command
+# if continue is set (true) it will send the original command otherwise it will not
+###
+output:
+  # setup a spell in MegaMUD called #beg target player or monster, 0 mana required, and 
+  # special command of "<begin>" (without the quotes). This string can be whatever you want
+  # as long as mega is sending it as a precast spell for the mob
+  - message: "<begin> {mob}"
+    raise: preCombat
+  # fun one to send an @party command, then do the command, then check your party
+  # like "k go portal"
+  - message: "k {command}"
+    raise: doAll
+  - message: n
+    raise: direction
+    continue: true
+  - message: test
+    raise: testEvent
+  - message: prerest
+    raise: preRest
+      
+# any spells with a matching start message are populated when it sees that message as being on
+# anytime an 'st' is done the list is cleared and repopulated
+# when the stop message appears the spell is put in a list to cast and only removed
+# when the successful start message appears
+spells:
+  - name: engraved warhorn # this is irrelevant
+    start: You feel inspired!
+    stop: The inspiration wears off.
+    early: 30 # TODO: attempt to cast 30 seconds early
+    command:
+      - 'hasItem:engraved warhorn'
+      - *RemoveHands
+      - eq engraved warhorn
+      - use engraved warhorn
+      - rem engraved warhorn
+      - *EquipHands
+  # - name: troll # this is irrelevant
+  #   start: Your body is regenerating quickly. 
+  #   stop: Your body stops regenerating. 
+  #   above: .57
+  #   command: trol
+
+events:
+  # midRound is a built-in event that processes while attacking. it happens after the first
+  # round and each subsequent round until the monster is dead. it fires 100 milliseconds
+  # after the last attacking/miss message
+  #
+  midRound:
+    - *UseNexus
+  # mobDied is a built-in event that processes when you gain experience indicating a mob died
+  mobDied:
+    - "test:{mobs} = 0"
+    - "test:{HP%} >= .50"
+    - "test:{MA%} >= .75"
+    - mihe
+  direction:
+    - "delay:300"
+    - ""
+  preCombat:
+    - *UseNexus
+  gearUp: wea {gear}
+  sneakOff: 'bot:@auto-sneak off'
+  partyCheck:
+    - "delay:300"
+    - par
+  doAll:
+    - ".@party {command}"
+    - "{command}"
+    - par
+  # mobCount events are built-in and only trigger when the mob count changes
+  # note that mob count is a factor of all mobs in the room without capital letters
+  # so it will not count mobs such as Gnaj the Creator
+  #"mobCount 16": "bot:@auto-combat on"
+  #"mobCount 15": "bot:@auto-combat on"
+  #"mobCount 14": "bot:@auto-combat on"
+  #"mobCount 13": "bot:@auto-combat on"
+  #"mobCount 12": "bot:@auto-combat on"
+  #"mobCount 11": "bot:@auto-combat on"
+  #"mobCount 10": "bot:@auto-combat on"
+  #"mobCount 9": "bot:@auto-combat on"
+  #"mobCount 8": "bot:@auto-combat on"
+  #"mobCount 0": "bot:@auto-combat off"
+  testEvent:
+    - "test:{warhornOff}=true:nowarhorn"
+    - ".NO WARHORNS ALLOWED"
+  nowarhorn:
+    - ".FUCK YES WARHORNS!"
+      
+###
+# RESPONSES
+# these are extended @ commands that can be used. for example, you can query a players
+# map/room with /player @room.
+# it will raise the event and then respond. See the @room for an example
+###
+responses:
+  - command: '@room'
+    pre: rm
+    response: "Location: {map}/{room}"
+    # only the list of AllowedPlayers from the macros above
+    allowed: *AllowedPlayers
+  - command: '@gear'
+    raise: gearUp
+    response: '@ok'
+    # the list of AllowedPlayers above plus Achilles
+    allowed:
+      - *AllowedPlayers
+      - Achilles
+  - command: '@death'
+    pre: pro
+    response: "{deaths[0] > cause} @ {deaths[0] > location}"
+    allowed: *AllowedPlayers
+      
+###
+# MOBS
+# NOT YET IMPLEMENTED
+# run specific commands before and after attacking that mob and after
+# killing them
+###
+mobs:
+  - name: Demoness
+    before:
+      - rem diamond-enc
+      - eq sunstone
+    after:
+      - rem sunstone
+      - eq diamond-enc
