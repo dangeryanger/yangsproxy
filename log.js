@@ -20,8 +20,6 @@ var logfile = path.join(process.cwd(), 'mudproxy.log');
 //
 var config = {
     '/': true, // Default enable all logging
-    '/timers': true,
-    '/messaging': true,
     '/messaging/incoming/data': false,
 };
 var disk = config;
