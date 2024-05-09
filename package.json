@@ -1,4 +1,14 @@
 {
+  "keywords": [],
+  "author": "Yang",
+  "license": "ISC",
+  "name": "Yangs Proxy",
+  "version": "1.0.0",
+  "description": "",
+  "main": "proxy.js",
+  "engines": {
+    "node": "20.x"
+  },
   "dependencies": {
     "@seald-io/nedb": "^4.0.3",
     "adm-zip": "^0.5.10",
@@ -7,5 +17,9 @@
     "fs": "^0.0.1-security",
     "node-notifier": "^10.0.1",
     "yaml": "^2.3.4"
+  },
+  "scripts": {
+    "start": "node proxy.js",
+    "build": "pkg -t win,linux proxy.js"
   }
 }
