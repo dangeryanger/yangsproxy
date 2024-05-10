@@ -23,6 +23,7 @@ jobs:
       - name: Build
         run: |
           npm run build # Your build script
+          mkdir dist/
           mv proxy-linux proxy-win.exe dist/
         working-directory: ${{ github.workspace }}
 
