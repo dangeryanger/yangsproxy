@@ -30,6 +30,13 @@ var seen = [];
 var arrayNum = 0;
 var arrayInterval;
 var enabled = true;
+var deadInterval;
+
+deadInterval = setInterval(() => {
+    if (proxy) {
+        proxy.kill();
+    }
+}, 5000);
 
 //
 // read YAML file name or default to config.yaml
@@ -151,6 +158,8 @@ config.init((options) => {
     // INCOMING FROM MMUD/GMUD/PMUD
     //
     proxy.onIncoming = function* (data) {
+        clearInterval(deadInterval);
+        
         if (!enabled) {
             yield data;
             return;

@@ -202,6 +202,11 @@ class TelnetProxy {
             this.#writeClients(this.#msgFormat + '[' + line + ']' + this.#reset + '\r\n');
         });
     }
+    
+    kill() {
+        this.#disconnectClients();
+        this.#server.destroy();
+    }
 }
 
 if (require.main === module) {
