@@ -36,12 +36,10 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           title: "Yangs Proxy Release"
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Release
+        uses: softprops/action-gh-release@v2
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./proxy-linux
-          asset_name: proxy-linux
-          asset_content_type: application/octet-stream
+          files: |
+            proxy-linux
+            proxy-win.exe
+            config.yaml
