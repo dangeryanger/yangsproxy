@@ -17,6 +17,8 @@ class Player extends EventEmitter {
     #config;
     #topList = [];
     #inventory;
+    #mobsInRoom;
+    #seen = {};
     
     set Config(config) { this.#config = config; }
 
@@ -209,9 +211,34 @@ class Player extends EventEmitter {
         }
     }
     
+    mobInRoom(mob) {
+        return this.#mobsInRoom.some(name => name.includes(mob));
+    }
+    
     processBlock(data) {
         if (/You are carrying/g.test(data)) {
             this.parseInventory(data);
+        }
+
+        if (match = /^Also here: (.*)\./ms.exec(data)) {
+            this.#mobsInRoom = [];
+            let seenTime = new Date();
+            let list = match[1];
+            let mobs = list.split(',');
+
+            mobs.forEach((mob) => {
+                this.#mobsInRoom.push(mob);
+                mob = mob.trim().replaceAll(/\*/g, '');
+                log.write('/parsing/mobs', `seen *${mob}* @ ${seenTime}`);
+                this.#seen[mob] = seenTime;
+            });
+            return mobs.filter(mob => /^[^A-Z]*$/.test(mob.trim())).length;
+        }
+
+        // got Obvious exits, but no Also here
+        if (/^(?!.*^Also here:).*^Obvious exits:.*/ms.test(data)) {
+            this.#mobsInRoom = [];
+            return 0;
         }
     }
     

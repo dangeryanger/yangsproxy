@@ -12,6 +12,7 @@ class Configuration {
     #loadCallback;
     #errorCallback;
     #fsTimeout;
+    #customSchema;
     
     get state() { return this.#data.state }
     get options() { return this.#data }
@@ -21,6 +22,7 @@ class Configuration {
         this.#filename = filename;
         this.stateFile = process.cwd() + "/tp.db";
         this.#db = new nedb({ filename: this.stateFile, autoload: true });
+        this.setCustomSchema();
 
         fs.watchFile(this.#filename, (curr, prev) => {
             if (curr.mtime !== prev.mtime) {
@@ -28,6 +30,19 @@ class Configuration {
                 this.#loadYamlFile(this.#filename);
             }
         });
+    }
+    
+    setCustomSchema() {
+        this.#customSchema = [{
+            identify: (value) => typeof value === 'string',
+            tag: '!secret',
+            resolve: (node) => {
+                if (fs.existsSync(node)) {
+                    return fs.readFileSync(node, 'utf8'); // Read the file contents
+                }
+                return;
+            }
+        }]
     }
     
     async init(loadCallback = null, errorCallback = null) {
@@ -42,7 +57,8 @@ class Configuration {
         try {
             const fileContents = fs.readFileSync(filePath, 'utf8');
 
-            this.#data = YAML.parse(fileContents);
+            this.#data = YAML.parse(fileContents, {customTags: this.#customSchema});
+
             if (!this.#data) {
                 log.write('/config/yaml/load/errors', '!#data is null!')
             }

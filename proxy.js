@@ -33,7 +33,7 @@ var enabled = true;
 var deadInterval;
 
 deadInterval = setInterval(() => {
-    if (proxy) {
+    if (player?.InGame && proxy) {
         proxy.kill();
     }
 }, 5000);
@@ -159,7 +159,7 @@ config.init((options) => {
     //
     proxy.onIncoming = function* (data) {
         clearInterval(deadInterval);
-        
+
         if (!enabled) {
             yield data;
             return;
@@ -260,6 +260,7 @@ config.init((options) => {
 
             let handled = false;
             
+            log.write('/messaging/outgoing/command/data', `*${data}*`);
             // sets the command if user is typing or directly sent
             command = (data === '\b' && command.length > 0) ? command.slice(0, -1) : command + data;
 
@@ -328,7 +329,7 @@ config.init((options) => {
         return substituteVariables(data).join('\r');
     }
     
-    if (config.options.discord) {
+    if (config.options.discord && !config.options.discord.disabled) {
         discord.login(config.options.discord.bot);
 
         discord.on('ready', () => {
@@ -433,14 +434,6 @@ function handleProxyCommands(command) {
         return true;
     }
     
-    if (command == "lot") {
-        log.write('/messaging/outgoing/command/proxy', `lot`);
-        findGaps(5).forEach(gap => {
-            proxy.writeMessage(gap);
-        });
-        return true;
-    }
-    
     //
     // debug
     //
@@ -475,8 +468,6 @@ function handleProxyCommands(command) {
     return false;
 }
 
-let lotSeen = [];
-
 function mobCount(data) {
     // parse Also here count
     if (match = /^Also here: (.*)\./ms.exec(data)) {
@@ -488,11 +479,6 @@ function mobCount(data) {
             mob = mob.trim().replaceAll(/\*/g, '');
             log.write('/parsing/mobs', `seen *${mob}* @ ${seenTime}`);
             seen[mob] = seenTime;
-            
-            if (mob == 'Lot') {
-                lotSeen.push(seenTime);
-                lotSeen = lotSeen.filter(time => (seenTime - time) <= 48*60*60*1000); // older than 48 hours
-            }
         });
         return mobs.filter(mob => /^[^A-Z]*$/.test(mob.trim())).length;
     }
@@ -503,25 +489,6 @@ function mobCount(data) {
     }
     
     return;
-}
-
-
-function findGaps(minutes) {
-    if (lotSeen.length == 0) return ['Lot has not been seen yet.'];
-
-    const gaps = [];
-    const msGap = minutes * 60 * 1000;
-
-    for (let i = 0; i < lotSeen.length - 1; i++) {
-        let gap = lotSeen[i + 1] - lotSeen[i];
-        if (gap > msGap) {
-            let startTime = new Date(lotSeen[i] + msGap);
-            let endTime = new Date(lotSeen[i + 1]);
-            gaps.push(`${formatDate(startTime)} - ${formatDate(endTime)} - ${Math.floor(gap / 60000)} minutes`);
-        }
-    }
-
-    return gaps.length > 0 ? gaps : [`No gaps of ${minutes} minutes found for Lot`];
 }
 
 function formatDate(date) {
@@ -586,6 +553,7 @@ function handleMessages(line) {
         }
         
         if (message.raise) raiseEvent(message.raise);
+        if (message.do) processEvent(message.do);
         hide = hide || message.hide;
     });
     
@@ -607,6 +575,7 @@ function handleOutput(line) {
             }
             
             if (output.raise) raiseEvent(output.raise);
+            if (output.do) processEvent(output.do);
             
             return output;
         }
@@ -778,6 +747,13 @@ function processEvent(event) {
             let delay = parseInt(step.split(":")[1], 10);
             log.write('/config/events/step/delay', `*${delay}*`);
             sleep(delay);
+        } else if (step.startsWith("mob:")) {
+            let mob = step.split(":")[1];
+            
+            if (!player.mobInRoom(mob)) {
+                log.write('/config/events/step/mob', `mob *${mob}* not found in room.`);
+                return;
+            }
         } else if (step.startsWith("hasItem:")) {
             let item = step.split(":")[1];
             

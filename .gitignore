@@ -143,3 +143,4 @@ update*
 !update.js
 proxy-linux
 proxy-win.exe
+*.txt

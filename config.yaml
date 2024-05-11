@@ -12,26 +12,27 @@ bbs:
   port: 2427
     
 discord:
-  bot: "token" # your discord bot token
+  disabled: true
+  bot: !secret discord.txt
   channel: "1223320104733769808" # has to be a string
   users:
     ray_zor: Yang
     
 log:
-  '/': false
-  '/telnet': false
-  '/telnet/disconnects': false
-  '/config': false
-  '/config/errors': false
-  '/timers': false
-  '/timers/execute': false
-  '/spells': false
+  '/': true
+  #'/telnet': false
+  #'/telnet/disconnects': false
+  #'/config': false
+  #'/config/errors': false
+  #'/timers': false
+  #'/timers/execute': false
+  #'/spells': false
   '/messaging/incoming/data': false
   '/messaging/incoming/data/noAnsi': false
   '/messaging/incoming/data/ansi': false
   '/messaging/incoming/data/line': false
-  '/messaging/outgoing/command': false
-  '/parsing/mobs': false
+  #'/messaging/outgoing/command': false
+  #'/parsing/mobs': false
   '/discord': true
     
 disk:
@@ -121,14 +122,15 @@ messages:
   - find: "Location:*{map},{room}"
   # ensures that your party is still with you
   - find: "You climb through a hole in the ceiling."
-    raise: partyCheck
+    do:
+      - "delay:300"
+      - par
   # captures your AC/DR
   - find: "Armour Class:*{ac}/{dr}*Thievery"
     anywhere: true
-      #4/17/2024 4:32 PM - Mother Ungol - 1/23
+  # captures your death locations into an array that can be accessed by {deaths[0] > location}
   - find: "{mm}/{dd}/{yyyy} {time} {ampm} - {cause} - {location}"   
     array: deaths
-      
       
 ###
 # OUTPUT
@@ -146,11 +148,14 @@ output:
   # like "k go portal"
   - message: "k {command}"
     raise: doAll
+  # handles 'n' raises the event and then sends the original command
   - message: n
     raise: direction
     continue: true
   - message: test
-    raise: testEvent
+    do:
+      - "mob:rat"
+      - spit
   - message: prerest
     raise: preRest
       
@@ -196,9 +201,6 @@ events:
     - *UseNexus
   gearUp: wea {gear}
   sneakOff: 'bot:@auto-sneak off'
-  partyCheck:
-    - "delay:300"
-    - par
   doAll:
     - ".@party {command}"
     - "{command}"
